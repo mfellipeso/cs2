@@ -1,0 +1,93 @@
+services:
+  db:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${DB_NAME:-cs2skins}
+      MARIADB_USER: ${DB_USER:-cs2}
+      MARIADB_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD no .env}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?defina DB_ROOT_PASSWORD no .env}
+    volumes:
+      - dbdata:/var/lib/mysql
+    networks: [cs2net]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  cs2:
+    build: ./cs2
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SRCDS_TOKEN: ${SRCDS_TOKEN:-}
+      CS2_SERVERNAME: ${CS2_SERVERNAME:-CS2 Docker}
+      CS2_RCONPW: ${CS2_RCONPW:?defina CS2_RCONPW no .env}
+      CS2_PW: ${CS2_PW:-}
+      CS2_MAXPLAYERS: ${CS2_MAXPLAYERS:-12}
+      CS2_GAMEALIAS: ${CS2_GAMEALIAS:-competitive}
+      CS2_MAPGROUP: ${CS2_MAPGROUP:-mg_active}
+      CS2_STARTMAP: ${CS2_STARTMAP:-de_inferno}
+      CS2_SERVER_HIBERNATE: ${CS2_SERVER_HIBERNATE:-0}
+      STEAMAPPVALIDATE: ${STEAMAPPVALIDATE:-0}
+      # Evita crash do .NET (CSSharp) por falta de globalização/libicu.
+      DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "true"
+      # Consumidas pelo cs2-setup.sh para renderizar WeaponPaints.json.
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: ${DB_NAME:-cs2skins}
+      DB_USER: ${DB_USER:-cs2}
+      DB_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD no .env}
+      WP_LANG: ${WP_LANG:-en}
+      WEB_URL: ${WEB_URL:-http://localhost:8080}
+    volumes:
+      - cs2data:/home/steam/cs2-dedicated/
+      - ./cs2/pre.sh:/home/steam/cs2-dedicated/pre.sh:ro
+    ports:
+      - "27015:27015/tcp"
+      - "27015:27015/udp"
+      - "27020:27020/udp"
+    networks: [cs2net]
+    stdin_open: true
+    tty: true
+    mem_limit: 4g
+
+  web:
+    build:
+      context: ./web
+      args:
+        WEBSITE_TAG: ${WEBSITE_TAG:-v2.3}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      STEAM_API_KEY: ${STEAM_API_KEY:?defina STEAM_API_KEY no .env}
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: ${DB_NAME:-cs2skins}
+      DB_USER: ${DB_USER:-cs2}
+      DB_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD no .env}
+      WEB_LANG: ${WP_LANG:-en}
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    networks: [cs2net]
+
+  # Opcional: auto-update da IMAGEM (não do jogo). Cuidado com o acoplamento
+  # de versões CS2 <-> Metamod/CSSharp (ver SPEC §6). Descomente por sua conta.
+  # watchtower:
+  #   image: containrrr/watchtower
+  #   restart: unless-stopped
+  #   command: --interval 3600 --cleanup
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+
+networks:
+  cs2net:
+
+volumes:
+  cs2data:
+  dbdata:
