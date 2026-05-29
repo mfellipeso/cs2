@@ -33,6 +33,8 @@ services:
       CS2_STARTMAP: ${CS2_STARTMAP:-de_inferno}
       CS2_SERVER_HIBERNATE: ${CS2_SERVER_HIBERNATE:-0}
       STEAMAPPVALIDATE: ${STEAMAPPVALIDATE:-0}
+      # Args crus de launch (ex.: -insecure para desligar o VAC).
+      CS2_ADDITIONAL_ARGS: ${CS2_ADDITIONAL_ARGS:-}
       # Evita crash do .NET (CSSharp) por falta de globalização/libicu.
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "true"
       # Consumidas pelo cs2-setup.sh para renderizar WeaponPaints.json.
