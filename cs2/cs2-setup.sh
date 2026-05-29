@@ -14,6 +14,9 @@ log() { echo "[cs2-setup] $*"; }
 # --- 1. Sincroniza addons (Metamod + CSSharp + plugins) ---
 log "sincronizando addons -> $CSGO/addons"
 mkdir -p "$CSGO/addons"
+# Limpa a pasta do WeaponPaints antes de copiar, para refletir exatamente o /opt
+# (remove lixo de estruturas antigas, ex.: aninhamento duplo WeaponPaints/WeaponPaints).
+rm -rf "$CSGO/addons/counterstrikesharp/plugins/WeaponPaints" 2>/dev/null || true
 cp -r "$ADDONS_SRC/." "$CSGO/addons/"
 
 # --- 2. Copia cfgs do servidor ---
@@ -45,14 +48,9 @@ if [ -f "$CORE" ]; then
     jq '.FollowCS2ServerGuidelines = false' "$CORE" > "$tmp" && mv "$tmp" "$CORE"
 fi
 
-# --- 5. gamedata do WeaponPaints no lugar certo ---
-GD_SRC="$CSGO/addons/counterstrikesharp/plugins/WeaponPaints/gamedata/weaponpaints.json"
-GD_DST_DIR="$CSGO/addons/counterstrikesharp/gamedata"
-if [ -f "$GD_SRC" ]; then
-    log "copiando weaponpaints.json para gamedata/"
-    mkdir -p "$GD_DST_DIR"
-    cp "$GD_SRC" "$GD_DST_DIR/weaponpaints.json"
-fi
+# --- 5. gamedata do WeaponPaints ---
+# Já vem stageado em /opt/cs2-addons/addons/counterstrikesharp/gamedata/ (install-plugins.sh)
+# e é sincronizado no passo 1. Nada a fazer aqui.
 
 # --- 6. WeaponPaints.json a partir das env vars do banco ---
 # Geramos com jq --arg para escapar com segurança (senha pode ter aspas, \, $, etc.).

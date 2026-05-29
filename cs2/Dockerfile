@@ -7,7 +7,7 @@
 FROM joedwards32/cs2:latest
 
 # Versões fixadas de propósito (ver SPEC §6). Bumpar CS2+Metamod+CSSharp juntos.
-ARG MMS_BUILD=1390
+ARG MMS_BUILD=1401
 ARG CSSHARP_TAG=v1.0.368
 ARG CSSHARP_VER=1.0.368
 ARG WEAPONPAINTS_TAG=build-423

@@ -11,8 +11,10 @@ trap 'rm -rf "$WORK"' EXIT
 
 mkdir -p "$ADDONS"
 
-echo "==> Metamod:Source 2.0 (build ${MMS_BUILD})"
-curl -fsSL "https://mms.alliedmods.net/mmsdrop/2.0/mmsource-2.0.0-git${MMS_BUILD}-linux.tar.gz" \
+echo "==> Metamod:Source 2.0 dev (build ${MMS_BUILD})"
+# Dev builds via GitHub releases (tag 2.0.0.<build>). O CDN mmsdrop só serve o
+# build "latest"; builds específicos retornam 403 por lá.
+curl -fsSL "https://github.com/alliedmodders/metamod-source/releases/download/2.0.0.${MMS_BUILD}/mmsource-2.0.0-git${MMS_BUILD}-linux.tar.gz" \
     -o "$WORK/mms.tar.gz"
 tar -xzf "$WORK/mms.tar.gz" -C "$STAGE"   # -> $STAGE/addons/metamod[.vdf]
 
@@ -38,11 +40,25 @@ fetch_plugin() {
     fi
 }
 
+# Libs (zip com prefixo addons/) -> fluxo genérico
 # Cadeia: WeaponPaints -> MenuManager -> PlayerSettings -> AnyBaseLib (todas obrigatórias)
 fetch_plugin "https://github.com/NickFox007/AnyBaseLibCS2/releases/download/${ANYBASELIB_TAG}/AnyBaseLib.zip"          AnyBaseLib
 fetch_plugin "https://github.com/NickFox007/PlayerSettingsCS2/releases/download/${PLAYERSETTINGS_TAG}/PlayerSettings.zip" PlayerSettings
 fetch_plugin "https://github.com/NickFox007/MenuManagerCS2/releases/download/${MENUMANAGER_TAG}/MenuManager.zip"        MenuManager
-fetch_plugin "https://github.com/Nereziel/cs2-WeaponPaints/releases/download/${WEAPONPAINTS_TAG}/WeaponPaints.zip"      WeaponPaints
+
+# WeaponPaints é especial: o zip extrai {WeaponPaints/, gamedata/} (SEM prefixo addons/).
+# Plugin -> plugins/WeaponPaints/WeaponPaints.dll ; gamedata -> addons/counterstrikesharp/gamedata/
+echo "==> WeaponPaints"
+curl -fsSL "https://github.com/Nereziel/cs2-WeaponPaints/releases/download/${WEAPONPAINTS_TAG}/WeaponPaints.zip" -o "$WORK/WeaponPaints.zip"
+mkdir -p "$WORK/wp"
+unzip -q "$WORK/WeaponPaints.zip" -d "$WORK/wp"
+if [ -d "$WORK/wp/WeaponPaints" ]; then
+    cp -r "$WORK/wp/WeaponPaints" "$PLUGINS/"                 # -> plugins/WeaponPaints/ (dll direto)
+else
+    cp -r "$WORK/wp" "$PLUGINS/WeaponPaints"                  # fallback: zip já é a pasta do plugin
+fi
+mkdir -p "$ADDONS/counterstrikesharp/gamedata"
+[ -d "$WORK/wp/gamedata" ] && cp -r "$WORK/wp/gamedata/." "$ADDONS/counterstrikesharp/gamedata/" || true
 
 echo "==> Conteúdo final de $ADDONS:"
 ls -la "$ADDONS"
