@@ -7,5 +7,5 @@
 dbdata/
 cs2data/
 
-# Artefato de referência (histórico do setup manual)
-output.txt
+# Arquivos de texto (logs, dumps, artefatos de referência)
+*.txt
