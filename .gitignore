@@ -1,0 +1,8 @@
+# Segredos / ambiente
+.env
+*.env
+!.env.example
+
+# Volumes / dados locais
+dbdata/
+cs2data/
