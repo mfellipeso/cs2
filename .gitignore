@@ -6,3 +6,6 @@
 # Volumes / dados locais
 dbdata/
 cs2data/
+
+# Artefato de referência (histórico do setup manual)
+output.txt
