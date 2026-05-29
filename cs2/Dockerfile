@@ -14,6 +14,7 @@ ARG WEAPONPAINTS_TAG=build-423
 ARG MENUMANAGER_TAG=1.4.1
 ARG PLAYERSETTINGS_TAG=0.9.4
 ARG ANYBASELIB_TAG=0.9.4
+ARG RCON_CLI_VER=0.10.3
 
 USER root
 
@@ -32,9 +33,16 @@ RUN chmod +x /usr/local/bin/install-plugins.sh \
        PLAYERSETTINGS_TAG="$PLAYERSETTINGS_TAG" ANYBASELIB_TAG="$ANYBASELIB_TAG" \
        /usr/local/bin/install-plugins.sh
 
+# Cliente RCON (gorcon/rcon-cli) usado pelo csadmin.
+RUN curl -fsSL "https://github.com/gorcon/rcon-cli/releases/download/v${RCON_CLI_VER}/rcon-${RCON_CLI_VER}-amd64_linux.tar.gz" -o /tmp/rcon.tar.gz \
+    && tar -xzf /tmp/rcon.tar.gz -C /tmp \
+    && install -m 0755 "$(find /tmp -type f -name rcon | head -n1)" /usr/local/bin/rcon \
+    && rm -rf /tmp/rcon*
+
 COPY cs2-setup.sh /usr/local/bin/cs2-setup.sh
+COPY csadmin /usr/local/bin/csadmin
 COPY cfg/ /opt/cs2-addons/cfg/
-RUN chmod +x /usr/local/bin/cs2-setup.sh \
+RUN chmod +x /usr/local/bin/cs2-setup.sh /usr/local/bin/csadmin \
     && chown -R 1000:1000 /opt/cs2-addons
 
 USER steam

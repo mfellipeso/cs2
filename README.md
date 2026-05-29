@@ -47,6 +47,26 @@ docker compose restart cs2   # SteamCMD atualiza no boot; addons são re-sincron
 > Prefira atualizar **de propósito**, bumpando as versões (ARGs no `cs2/Dockerfile`)
 > e o jogo juntos. Ver SPEC §6.
 
+## Administração (trocar mapa, modos divertidos)
+
+Use o `csadmin` dentro do container (via RCON):
+
+```bash
+docker compose exec cs2 csadmin maps              # lista mapas
+docker compose exec cs2 csadmin map de_dust2      # troca de mapa
+docker compose exec cs2 csadmin modes             # lista modos
+docker compose exec cs2 csadmin mode only_pistol  # aplica um modo
+docker compose exec cs2 csadmin pause             # pausa / unpause despausa
+docker compose exec cs2 csadmin status            # status do servidor
+docker compose exec cs2 csadmin rcon "say ola"    # comando RCON cru
+```
+
+**Modos divertidos** (em `cs2/cfg/modes/`, feitos só com convars — sem plugin):
+`normal`, `only_pistol`, `shotgun_only`, `sniper_only` (via `mp_buy_allow_guns`),
+`only_deagle`, `only_awp`, `only_knife`, `only_nade`, `scoutz` (scout+faca),
+`headshot` (só dano na cabeça). `mode normal` volta ao competitivo.
+Edite/crie `.cfg` na pasta e o `csadmin` já reconhece.
+
 ## Estrutura
 
 ```
@@ -59,7 +79,10 @@ docker compose restart cs2   # SteamCMD atualiza no boot; addons são re-sincron
 │   ├── install-plugins.sh        # download dos addons (build time)
 │   ├── cs2-setup.sh              # sync + patches (a cada start)
 │   ├── pre.sh                    # hook chamado pela imagem (bind-mount)
-│   └── cfg/gamemode_competitive_server.cfg
+│   ├── csadmin                   # CLI de admin via RCON (map/modes/status)
+│   └── cfg/
+│       ├── gamemode_competitive_server.cfg
+│       └── modes/                # modos divertidos (only_pistol, only_awp, ...)
 └── web/
     ├── Dockerfile                # FROM php:8.3-apache + site v2.3
     └── entrypoint.sh             # gera config.php das env vars
