@@ -3,8 +3,10 @@
 FROM php:8.3-apache
 
 ARG WEBSITE_TAG=v2.3
-# Ref de onde baixar os dados das skins (src/data/*.json). main = skins sempre atuais.
-ARG DATA_REF=main
+# Ref dos dados das skins (src/data/*.json). Por padrão segue a MESMA versão do
+# site (WEBSITE_TAG) para o formato dos dados casar com o código do site.
+# Use DATA_REF=main se quiser a lista de skins mais atual (pode divergir do formato).
+ARG DATA_REF=${WEBSITE_TAG}
 
 # pdo_mysql (acesso ao banco) + mod_rewrite + AllowOverride (o site usa .htaccess)
 RUN apt-get update \
