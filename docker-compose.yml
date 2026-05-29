@@ -1,7 +1,15 @@
+# Log em JSON, máx. 15MB por arquivo, com rotação (3 arquivos). Ajuste max-file se quiser.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "15m"
+    max-file: "3"
+
 services:
   db:
     image: mariadb:11
     restart: unless-stopped
+    logging: *default-logging
     environment:
       MARIADB_DATABASE: ${DB_NAME:-cs2skins}
       MARIADB_USER: ${DB_USER:-cs2}
@@ -19,6 +27,7 @@ services:
   cs2:
     build: ./cs2
     restart: unless-stopped
+    logging: *default-logging
     depends_on:
       db:
         condition: service_healthy
@@ -63,6 +72,7 @@ services:
       args:
         WEBSITE_TAG: ${WEBSITE_TAG:-v2.3}
     restart: unless-stopped
+    logging: *default-logging
     depends_on:
       db:
         condition: service_healthy
