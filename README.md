@@ -79,7 +79,7 @@ Edite/crie `.cfg` na pasta e o `csadmin` já reconhece.
 │   ├── install-plugins.sh        # download dos addons (build time)
 │   ├── cs2-setup.sh              # sync + patches (a cada start)
 │   ├── pre.sh                    # hook chamado pela imagem (bind-mount)
-│   ├── csadmin                   # CLI de admin via RCON (map/modes/status)
+│   ├── csadmin.sh                # CLI de admin via RCON (vira o comando `csadmin`)
 │   └── cfg/
 │       ├── gamemode_competitive_server.cfg
 │       └── modes/                # modos divertidos (only_pistol, only_awp, ...)

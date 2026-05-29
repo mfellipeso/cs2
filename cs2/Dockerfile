@@ -40,7 +40,7 @@ RUN curl -fsSL "https://github.com/gorcon/rcon-cli/releases/download/v${RCON_CLI
     && rm -rf /tmp/rcon*
 
 COPY cs2-setup.sh /usr/local/bin/cs2-setup.sh
-COPY csadmin /usr/local/bin/csadmin
+COPY csadmin.sh /usr/local/bin/csadmin
 COPY cfg/ /opt/cs2-addons/cfg/
 RUN chmod +x /usr/local/bin/cs2-setup.sh /usr/local/bin/csadmin \
     && chown -R 1000:1000 /opt/cs2-addons
