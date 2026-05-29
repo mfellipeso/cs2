@@ -75,23 +75,79 @@ Use quando NÃO houve patch que quebra plugins. Se os plugins quebrarem, faça o
 
 ### Atualizar de propósito (recomendado)
 
-1. Confirmar versões compatíveis (Discord do CounterStrikeSharp após patches).
-2. Bumpar os **ARGs** em `cs2/Dockerfile`:
-   - `MMS_BUILD` (Metamod 2.0 — `sourcemm.net/downloads.php?branch=master`)
-   - `CSSHARP_TAG` / `CSSHARP_VER` (`roflmuffin/CounterStrikeSharp` releases)
-   - `WEAPONPAINTS_TAG`, `MENUMANAGER_TAG`, `PLAYERSETTINGS_TAG`, `ANYBASELIB_TAG`
-3. Rebuild + recriar:
-   ```bash
-   docker compose build cs2 && docker compose up -d cs2
-   ```
+**Passo 0 — descobrir as versões compatíveis (ANTES de mexer em qualquer coisa):**
+- **Metamod 2.0 dev build**: o build mais novo precisa suportar a versão atual do CS2.
+  Lista: <https://www.sourcemm.net/downloads.php?branch=master&all=1> ou os releases em
+  <https://github.com/alliedmodders/metamod-source/releases>.
+  ⚠️ **Lição aprendida:** Metamod velho carrega o core mas resolve o path dos plugins
+  contra `/` (`[META] Loaded 0 plugins`) → CSSharp **não** carrega. Sempre o dev build novo.
+- **CounterStrikeSharp**: releases em <https://github.com/roflmuffin/CounterStrikeSharp/releases>;
+  após um patch do CS2, confirmar no Discord do CSSharp qual build é compatível.
+- **WeaponPaints + deps**: releases dos repos (Nereziel / NickFox007).
 
-> Regra: **bumpar CS2 + Metamod + CSSharp juntos.** Não deixe o jogo auto-atualizar à
-> frente dos plugins. O `watchtower` no compose está **comentado** de propósito.
+**Passo 1 — bumpar os ARGs em `cs2/Dockerfile`:**
+- `MMS_BUILD` (só o número, ex.: `1401`). **Fonte: GitHub releases**, tag `2.0.0.<build>`
+  (o `install-plugins.sh` monta a URL). O CDN `mmsdrop` só serve o build "latest" e
+  retorna **403** em builds específicos — por isso usamos o GitHub.
+- `CSSHARP_TAG` (ex.: `v1.0.368`) **e** `CSSHARP_VER` (ex.: `1.0.368`) — os dois.
+- `WEAPONPAINTS_TAG`, `MENUMANAGER_TAG`, `PLAYERSETTINGS_TAG`, `ANYBASELIB_TAG`.
 
-Atualizar o site:
+**Passo 2 — rebuild + recriar:**
 ```bash
-docker compose build web --build-arg WEBSITE_TAG=vX.Y && docker compose up -d web
+docker compose build cs2 && docker compose up -d cs2
+docker compose logs -f cs2          # acompanhar o boot
 ```
+
+> Regra de ouro: **bumpar CS2 + Metamod + CSSharp juntos.** Não deixe o jogo auto-atualizar
+> à frente dos plugins. O `watchtower` no compose está **comentado** de propósito.
+
+### Verificação pós-update (checklist)
+
+Rodar depois de `up -d cs2` (dar ~40-60s pro .NET subir):
+
+```bash
+# 1. Servidor de pé, não em loop de restart
+docker compose ps                                   # cs2 = Up (não "Restarting")
+
+# 2. Metamod carregou o(s) plugin(s)
+docker compose exec cs2 csadmin rcon "meta list"    # deve listar CounterStrikeSharp (NÃO "0 plugins")
+
+# 3. CSSharp carregou os plugins
+docker compose exec cs2 csadmin rcon "css_plugins list"  # MenuManager + PlayerSettings + WeaponPaints
+
+# 4. Skins renderizam (guideline desligada)
+grep FollowCS2ServerGuidelines csgo/addons/counterstrikesharp/configs/core.json   # = false
+
+# 5. Plugin conectou no banco (tabelas criadas)
+docker compose exec db sh -c 'mariadb -u"$MARIADB_USER" -p"$MARIADB_PASSWORD" "$MARIADB_DATABASE" -e "SHOW TABLES;"'
+# deve listar wp_player_skins, wp_player_knife, ...
+
+# 6. Sem exceções no log do plugin
+docker compose logs cs2 | grep -iE "exception|could not|0 plugins"   # idealmente vazio
+```
+
+Sinais de **sucesso** no log: `CounterStrikeSharp.API Loaded Successfully` e
+`[META] Loaded 1 plugin`. Se aparecer `[META] Loaded 0 plugins` → Metamod incompatível
+(voltar ao Passo 0 e pegar um dev build mais novo).
+
+**Rollback:** se quebrar, reverter os ARGs no `cs2/Dockerfile` para os valores anteriores
+(estão no git) e `docker compose build cs2 && docker compose up -d cs2`. O volume do jogo
+permanece; só a imagem/addons voltam à versão boa conhecida.
+
+### Atualizar o site / lista de skins
+
+```bash
+# Site (código). DATA_REF segue o WEBSITE_TAG por padrão (dados casam com a versão do site).
+docker compose build web --build-arg WEBSITE_TAG=vX.Y && docker compose up -d web
+
+# Só a lista de skins mais atual (mantendo o código do site), por sua conta e risco:
+docker compose build web --build-arg DATA_REF=main --no-cache && docker compose up -d web
+```
+
+Verificar: abrir `http://localhost:8080/skins` (logado) — sem warnings de
+`file_get_contents`/`foreach`, lista de skins aparecendo. Lembrar que **a lista do site e os
+dados do plugin precisam casar**: skin nova no site que o build do WeaponPaints não conhece
+pode não aplicar in-game.
 
 ## Debug
 
@@ -113,6 +169,9 @@ No console do servidor (RCON ou stdin via `docker attach`):
 | **Skins não aparecem** | `FollowCS2ServerGuidelines` não está `false` | `csgo/addons/counterstrikesharp/configs/core.json` |
 | **Metamod não carrega** | `gameinfo.gi` foi revertido por update | `grep metamod csgo/gameinfo.gi` → senão `docker compose restart cs2` re-patcha |
 | **CSSharp não carrega / crash após patch** | versão do jogo à frente do CSSharp | fazer update de propósito (bumpar ARGs) |
+| **`[META] Loaded 0 plugins` / `meta load` busca em `/addons/...`** | **Metamod dev build velho** (não acompanha a versão do CS2) | bumpar `MMS_BUILD` para o dev build mais novo (ver Passo 0) |
+| **Site: warnings `file_get_contents(src/data/*.json)`** | `src/data` vazio (não vem na release) | rebuild do `web` baixa os dados; ver "Atualizar o site" |
+| **Skin escolhida no site não aplica in-game** | lista do site à frente do build do WeaponPaints | bumpar `WEAPONPAINTS_TAG` (casar dados site ↔ plugin) |
 | **Plugin não conecta no banco** | creds erradas | `WeaponPaints.json` gerado; `docker compose logs db`; healthcheck do `db` |
 | **Crash do .NET (globalization)** | falta `libicu` | já mitigado por `DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=true` no compose |
 | **Site não loga com Steam** | `STEAM_API_KEY` ausente/errada | `.env`; o `config.php` é gerado no start pelo `web/entrypoint.sh` |
