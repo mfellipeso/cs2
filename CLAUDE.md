@@ -1,7 +1,6 @@
 # CLAUDE.md
 
-Guia para trabalhar neste repositório. Para a especificação completa e as decisões de
-arquitetura, ver [`SPEC.md`](./SPEC.md); para uso rápido, ver [`README.md`](./README.md).
+Guia para trabalhar neste repositório. Para uso rápido, ver [`README.md`](./README.md).
 
 ## O que é
 
